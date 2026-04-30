@@ -1,0 +1,35 @@
+{
+  "rpcUrl": "https://polygon-rpc.com",
+  "clobHost": "https://clob.polymarket.com",
+  "pollIntervalMs": 30000,
+  "confirmations": 1,
+  "concurrency": 2,
+  "minUsdceToWrap": "0.01",
+  "maxWrapPerWalletPerRun": "1000000",
+  "approveMode": "exact",
+  "wallets": [
+    {
+      "name": "account_1",
+      "enabled": true,
+      "mode": "eoa",
+      "privateKeyEnv": "PM_ACCOUNT_1_PRIVATE_KEY",
+      "recipient": "0xYourPolymarketFunderOrWalletAddress",
+      "clob": {
+        "enabled": true,
+        "apiKeyEnv": "PM_ACCOUNT_1_API_KEY",
+        "secretEnv": "PM_ACCOUNT_1_SECRET",
+        "passphraseEnv": "PM_ACCOUNT_1_PASSPHRASE"
+      }
+    },
+    {
+      "name": "account_2",
+      "enabled": true,
+      "mode": "eoa",
+      "privateKeyEnv": "PM_ACCOUNT_2_PRIVATE_KEY",
+      "recipient": "0xYourSecondRecipient",
+      "clob": {
+        "enabled": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "rpcUrl": "https://polygon-rpc.com",
+  "clobHost": "https://clob.polymarket.com",
+  "pollIntervalMs": 60000,
+  "confirmations": 1,
+  "concurrency": 1,
+  "minUsdceToWrap": "0.000001",
+  "maxWrapPerWalletPerRun": "1000000",
+  "wallets": [
+    {
+      "name": "main_safe",
+      "enabled": true,
+      "executionMode": "safe",
+      "safeAddress": "0xYourSafeProxyWalletAddress",
+      "ownerAddress": "0xYourEOAOwnerAddress",
+      "ownerPrivateKeyEnv": "PM_SAFE_MAIN_OWNER_PRIVATE_KEY",
+      "clob": {
+        "enabled": false,
+        "apiKeyEnv": "PM_SAFE_MAIN_API_KEY",
+        "secretEnv": "PM_SAFE_MAIN_SECRET",
+        "passphraseEnv": "PM_SAFE_MAIN_PASSPHRASE"
+      }
+    }
+  ]
+}

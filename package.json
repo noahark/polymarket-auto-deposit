@@ -1,0 +1,20 @@
+{
+  "name": "polymarket-auto-deposit",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/auto-confirm-deposit.js",
+    "dry-run": "node src/auto-confirm-deposit.js --config config/wallets.json --once --dry-run",
+    "safe:once": "node src/safe-auto-confirm-deposit.js --config config/safe-wallets.json --once",
+    "safe:watch": "node src/safe-auto-confirm-deposit.js --config config/safe-wallets.json --watch",
+    "safe:dry-run": "node src/safe-auto-confirm-deposit.js --config config/safe-wallets.json --once --dry-run",
+    "safe:refresh": "node src/safe-auto-confirm-deposit.js --config config/safe-wallets.json --refresh-only"
+  },
+  "dependencies": {
+    "@polymarket/clob-client-v2": "^1.0.0",
+    "@safe-global/protocol-kit": "^6.1.0",
+    "@safe-global/types-kit": "^3.0.0",
+    "dotenv": "^16.0.0",
+    "viem": "^2.21.8"
+  }
+}
