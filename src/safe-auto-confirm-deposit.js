@@ -516,6 +516,13 @@ async function processWallet(wallet, globalConfig, logger, opts) {
   if (opts.amount) {
     amountToWrap = parseUnits(opts.amount, 6);
     if (amountToWrap > safeUsdceBalance) {
+      if (opts.watchMode) {
+        logger.info(
+          tag,
+          `waiting for --amount ${opts.amount}; current Safe USDC.e balance is ${formatUnits(safeUsdceBalance, 6)}`
+        );
+        return { status: "skip", wallet: tag, reason: "insufficient_fixed_amount" };
+      }
       logger.error(
         tag,
         `--amount ${opts.amount} exceeds Safe USDC.e balance ${formatUnits(safeUsdceBalance, 6)}`
@@ -781,7 +788,8 @@ async function main() {
   const opts = {
     dryRun: args["dry-run"] || false,
     noClobRefresh: args["no-clob-refresh"] || false,
-    amount: args.amount || null
+    amount: args.amount || null,
+    watchMode: args.watch || false
   };
 
   // Validate --amount at CLI phase (exit 1 for user input errors)
@@ -792,6 +800,12 @@ async function main() {
       console.error(err.message);
       process.exit(1);
     }
+  }
+
+  // --amount + --watch requires exactly one wallet
+  if (args.watch && args.amount && wallets.length !== 1) {
+    console.error("--amount with --watch requires exactly one wallet. Use --wallet <name>.");
+    process.exit(1);
   }
 
   // --refresh-only: only do CLOB refresh, no chain operations
@@ -805,16 +819,40 @@ async function main() {
   if (args.watch) {
     console.log(`Watching every ${globalConfig.pollIntervalMs}ms, ${wallets.length} wallet(s)...`);
 
+    let shuttingDown = false;
+    let signalCount = 0;
+    let currentTick = null;
+    let requestedExitCode = null;
+
     const runningWallets = new Set();
 
     const tick = async () => {
+      if (shuttingDown) return;
+
       for (const wallet of wallets) {
-        if (runningWallets.has(wallet.name)) continue;
+        if (runningWallets.has(wallet.name) || shuttingDown) continue;
         runningWallets.add(wallet.name);
         try {
-          // Handle pending CLOB refreshes first
           await processPendingClobRefresh([wallet], globalConfig, logger);
-          await processWallet(wallet, globalConfig, logger, opts);
+          let result;
+          try {
+            result = await processWallet(wallet, globalConfig, logger, opts);
+          } catch (err) {
+            if (err instanceof VerificationError) {
+              logger.error(wallet.name, err.message);
+              result = { status: "verification_error", wallet: wallet.name, error: err.message };
+            } else {
+              throw err;
+            }
+          }
+
+          // --amount + --watch: stop after successful wrap
+          if (opts.amount && ["success", "dry_run", "clob_error", "verification_error"].includes(result.status)) {
+            requestedExitCode = getExitCode([result]);
+            shuttingDown = true;
+            if (intervalId) clearInterval(intervalId);
+            break;
+          }
         } catch (err) {
           logger.error(wallet.name, err.message);
         } finally {
@@ -823,13 +861,39 @@ async function main() {
       }
     };
 
-    await tick();
-    setInterval(tick, globalConfig.pollIntervalMs);
+    const startTick = () => {
+      if (shuttingDown || currentTick) return currentTick;
+      currentTick = tick().finally(() => {
+        currentTick = null;
+        if (requestedExitCode !== null && !currentTick) {
+          console.log(`--amount wrap completed. Exiting with code ${requestedExitCode}.`);
+          process.exit(requestedExitCode);
+        }
+      });
+      return currentTick;
+    };
 
-    process.on("SIGINT", () => {
-      console.log("\nShutting down...");
+    let intervalId = null;
+
+    const shutdown = async (signal) => {
+      signalCount += 1;
+      if (signalCount > 1) {
+        console.error(`\n${signal} received again. Force exiting.`);
+        process.exit(130);
+      }
+      shuttingDown = true;
+      if (intervalId) clearInterval(intervalId);
+      console.log(`\n${signal} received. Waiting for current wallet operation to finish...`);
+      if (currentTick) await currentTick;
+      console.log("Shutdown complete.");
       process.exit(0);
-    });
+    };
+
+    process.on("SIGINT", () => { void shutdown("SIGINT"); });
+    process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+
+    await startTick();
+    if (!shuttingDown) intervalId = setInterval(startTick, globalConfig.pollIntervalMs);
   } else {
     const results = await runOnce(wallets, globalConfig, logger, opts);
     printSummary(results);

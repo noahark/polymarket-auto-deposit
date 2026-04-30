@@ -223,27 +223,47 @@ async function main() {
   if (args.watch) {
     console.log(`Watching every ${globalConfig.pollIntervalMs}ms, ${wallets.length} wallet(s)...`);
 
-    let running = false;
+    let shuttingDown = false;
+    let signalCount = 0;
+    let currentTick = null;
 
     const tick = async () => {
-      if (running) return;
-      running = true;
+      if (shuttingDown) return;
       try {
         const results = await runOnce(wallets, globalConfig, logger, opts);
         printSummary(results);
       } catch (err) {
         console.error(`Watch tick error: ${err.message}`);
       }
-      running = false;
     };
 
-    await tick();
-    setInterval(tick, globalConfig.pollIntervalMs);
+    const startTick = () => {
+      if (shuttingDown || currentTick) return currentTick;
+      currentTick = tick().finally(() => { currentTick = null; });
+      return currentTick;
+    };
 
-    process.on("SIGINT", () => {
-      console.log("\nShutting down...");
+    let intervalId = null;
+
+    const shutdown = async (signal) => {
+      signalCount += 1;
+      if (signalCount > 1) {
+        console.error(`\n${signal} received again. Force exiting.`);
+        process.exit(130);
+      }
+      shuttingDown = true;
+      if (intervalId) clearInterval(intervalId);
+      console.log(`\n${signal} received. Waiting for current wallet operation to finish...`);
+      if (currentTick) await currentTick;
+      console.log("Shutdown complete.");
       process.exit(0);
-    });
+    };
+
+    process.on("SIGINT", () => { void shutdown("SIGINT"); });
+    process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+
+    await startTick();
+    if (!shuttingDown) intervalId = setInterval(startTick, globalConfig.pollIntervalMs);
   } else {
     const results = await runOnce(wallets, globalConfig, logger, opts);
     printSummary(results);

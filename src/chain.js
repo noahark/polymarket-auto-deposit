@@ -3,7 +3,8 @@ import {
   createWalletClient,
   http,
   formatUnits,
-  maxUint256
+  maxUint256,
+  parseAbi
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygon } from "viem/chains";
@@ -12,9 +13,12 @@ import {
   PUSD,
   COLLATERAL_ONRAMP,
   POLYGON_CHAIN_ID,
-  ERC20_ABI,
-  ONRAMP_ABI
+  ERC20_ABI as ERC20_ABI_RAW,
+  ONRAMP_ABI as ONRAMP_ABI_RAW
 } from "./constants.js";
+
+const ERC20_ABI = parseAbi(ERC20_ABI_RAW);
+const ONRAMP_ABI = parseAbi(ONRAMP_ABI_RAW);
 
 export function createClients(rpcUrl, privateKey) {
   const account = privateKeyToAccount(privateKey);
