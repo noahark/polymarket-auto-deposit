@@ -27,6 +27,20 @@ Polymarket 升级到 pUSD 机制后，部分充值或结算资金会先以 USDC.
 
 实际 Polymarket 网页账户通常应使用 Safe Proxy 模式。
 
+### Safe 模式地址说明
+
+Safe 模式每个 Polymarket 账号至少需要以下信息：
+
+- `safeAddress`：**必填**。Polymarket Safe Proxy Wallet 地址，USDC.e 和 pUSD 实际在这里。这个地址不能从私钥或 API key 推导，必须从 Polymarket 页面获取。
+- `ownerPrivateKeyEnv`：**必填**。保存 EOA owner 私钥的环境变量名。脚本会自动从私钥派生 owner 地址。
+- `ownerAddress`：**可选**。仅用于额外校验。如果填写，必须和私钥派生出的 EOA 地址一致。
+- `clob.*`：**可选**。用于 wrap 成功后刷新 Polymarket CLOB balance/allowance。
+
+注意：
+- 每个 Polymarket 账号有自己的 `safeAddress`。
+- `safeAddress` 不等于 EOA 地址。
+- API key/secret/passphrase 不等于链上钱包地址。
+
 ### 安装
 
 ```bash
@@ -45,7 +59,17 @@ cp config/safe-wallets.example.json config/safe-wallets.json
 编辑 `.env`：
 
 ```bash
-PM_SAFE_MAIN_OWNER_PRIVATE_KEY=0xYOUR_EOA_OWNER_PRIVATE_KEY
+# account 1
+PM_SAFE_ACCOUNT_1_OWNER_PRIVATE_KEY=0xYOUR_ACCOUNT_1_EOA_OWNER_PRIVATE_KEY
+PM_SAFE_ACCOUNT_1_API_KEY=...
+PM_SAFE_ACCOUNT_1_SECRET=...
+PM_SAFE_ACCOUNT_1_PASSPHRASE=...
+
+# account 2
+PM_SAFE_ACCOUNT_2_OWNER_PRIVATE_KEY=0xYOUR_ACCOUNT_2_EOA_OWNER_PRIVATE_KEY
+PM_SAFE_ACCOUNT_2_API_KEY=...
+PM_SAFE_ACCOUNT_2_SECRET=...
+PM_SAFE_ACCOUNT_2_PASSPHRASE=...
 ```
 
 编辑 `config/safe-wallets.json`：
@@ -55,11 +79,28 @@ PM_SAFE_MAIN_OWNER_PRIVATE_KEY=0xYOUR_EOA_OWNER_PRIVATE_KEY
   "rpcUrl": "https://your-polygon-rpc.example",
   "wallets": [
     {
-      "name": "main_safe",
+      "name": "account_1",
       "executionMode": "safe",
-      "safeAddress": "0xYourPolymarketSafeProxyWallet",
-      "ownerAddress": "0xYourEOAOwnerAddress",
-      "ownerPrivateKeyEnv": "PM_SAFE_MAIN_OWNER_PRIVATE_KEY"
+      "safeAddress": "0xYourAccount1PolymarketSafeProxyWallet",
+      "ownerPrivateKeyEnv": "PM_SAFE_ACCOUNT_1_OWNER_PRIVATE_KEY",
+      "clob": {
+        "enabled": true,
+        "apiKeyEnv": "PM_SAFE_ACCOUNT_1_API_KEY",
+        "secretEnv": "PM_SAFE_ACCOUNT_1_SECRET",
+        "passphraseEnv": "PM_SAFE_ACCOUNT_1_PASSPHRASE"
+      }
+    },
+    {
+      "name": "account_2",
+      "executionMode": "safe",
+      "safeAddress": "0xYourAccount2PolymarketSafeProxyWallet",
+      "ownerPrivateKeyEnv": "PM_SAFE_ACCOUNT_2_OWNER_PRIVATE_KEY",
+      "clob": {
+        "enabled": true,
+        "apiKeyEnv": "PM_SAFE_ACCOUNT_2_API_KEY",
+        "secretEnv": "PM_SAFE_ACCOUNT_2_SECRET",
+        "passphraseEnv": "PM_SAFE_ACCOUNT_2_PASSPHRASE"
+      }
     }
   ]
 }
@@ -70,8 +111,8 @@ PM_SAFE_MAIN_OWNER_PRIVATE_KEY=0xYOUR_EOA_OWNER_PRIVATE_KEY
 - `.env` 不要提交到 Git。
 - `config/safe-wallets.json` 不要提交到 Git。
 - 私钥只放在 `.env` 中。
-- `safeAddress` 是 Polymarket Safe Proxy Wallet 地址。
-- `ownerAddress` 是 Safe 的 owner，也是支付 Polygon gas 的 EOA 地址。
+- 每个 Polymarket 账号使用独立的 env 变量名。
+- `ownerAddress` 不再必填，脚本会从私钥自动派生。如果填写，仅作为额外校验。
 - EOA 地址需要有少量 POL 支付 gas。
 
 ### 常用命令
@@ -138,6 +179,20 @@ This script automates that confirmation flow:
 
 Most Polymarket web accounts should use Safe Proxy mode.
 
+### Safe Mode Address Explanation
+
+Safe mode requires the following information for each Polymarket account:
+
+- `safeAddress`: **Required**. The Polymarket Safe Proxy Wallet address where USDC.e and pUSD are held. This cannot be derived from the private key or API credentials. Obtain it from your Polymarket account page.
+- `ownerPrivateKeyEnv`: **Required**. The environment variable containing the EOA owner private key. The script derives the owner address automatically.
+- `ownerAddress`: **Optional**. Extra validation only. If provided, it must match the address derived from the private key.
+- `clob.*`: **Optional**. Used to refresh Polymarket CLOB balance/allowance after a successful wrap.
+
+Note:
+- Each Polymarket account has its own `safeAddress`.
+- `safeAddress` is not the same as the EOA address.
+- API key/secret/passphrase are not the same as on-chain wallet addresses.
+
 ### Installation
 
 ```bash
@@ -156,7 +211,17 @@ cp config/safe-wallets.example.json config/safe-wallets.json
 Edit `.env`:
 
 ```bash
-PM_SAFE_MAIN_OWNER_PRIVATE_KEY=0xYOUR_EOA_OWNER_PRIVATE_KEY
+# account 1
+PM_SAFE_ACCOUNT_1_OWNER_PRIVATE_KEY=0xYOUR_ACCOUNT_1_EOA_OWNER_PRIVATE_KEY
+PM_SAFE_ACCOUNT_1_API_KEY=...
+PM_SAFE_ACCOUNT_1_SECRET=...
+PM_SAFE_ACCOUNT_1_PASSPHRASE=...
+
+# account 2
+PM_SAFE_ACCOUNT_2_OWNER_PRIVATE_KEY=0xYOUR_ACCOUNT_2_EOA_OWNER_PRIVATE_KEY
+PM_SAFE_ACCOUNT_2_API_KEY=...
+PM_SAFE_ACCOUNT_2_SECRET=...
+PM_SAFE_ACCOUNT_2_PASSPHRASE=...
 ```
 
 Edit `config/safe-wallets.json`:
@@ -166,11 +231,28 @@ Edit `config/safe-wallets.json`:
   "rpcUrl": "https://your-polygon-rpc.example",
   "wallets": [
     {
-      "name": "main_safe",
+      "name": "account_1",
       "executionMode": "safe",
-      "safeAddress": "0xYourPolymarketSafeProxyWallet",
-      "ownerAddress": "0xYourEOAOwnerAddress",
-      "ownerPrivateKeyEnv": "PM_SAFE_MAIN_OWNER_PRIVATE_KEY"
+      "safeAddress": "0xYourAccount1PolymarketSafeProxyWallet",
+      "ownerPrivateKeyEnv": "PM_SAFE_ACCOUNT_1_OWNER_PRIVATE_KEY",
+      "clob": {
+        "enabled": true,
+        "apiKeyEnv": "PM_SAFE_ACCOUNT_1_API_KEY",
+        "secretEnv": "PM_SAFE_ACCOUNT_1_SECRET",
+        "passphraseEnv": "PM_SAFE_ACCOUNT_1_PASSPHRASE"
+      }
+    },
+    {
+      "name": "account_2",
+      "executionMode": "safe",
+      "safeAddress": "0xYourAccount2PolymarketSafeProxyWallet",
+      "ownerPrivateKeyEnv": "PM_SAFE_ACCOUNT_2_OWNER_PRIVATE_KEY",
+      "clob": {
+        "enabled": true,
+        "apiKeyEnv": "PM_SAFE_ACCOUNT_2_API_KEY",
+        "secretEnv": "PM_SAFE_ACCOUNT_2_SECRET",
+        "passphraseEnv": "PM_SAFE_ACCOUNT_2_PASSPHRASE"
+      }
     }
   ]
 }
@@ -181,8 +263,8 @@ Security rules:
 - Do not commit `.env`.
 - Do not commit `config/safe-wallets.json`.
 - Keep private keys only in `.env`.
-- `safeAddress` is your Polymarket Safe Proxy Wallet.
-- `ownerAddress` is the Safe owner and Polygon gas payer.
+- Use separate env variable names for each Polymarket account.
+- `ownerAddress` is no longer required — the script derives it from the private key automatically. If provided, it is used for extra validation only.
 - The EOA owner must have enough POL for gas.
 
 ### Commands

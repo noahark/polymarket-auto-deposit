@@ -110,12 +110,18 @@ function resolveSafeWallet(wallet) {
     throw new Error(`Wallet ${wallet.name}: executionMode must be "safe", got "${wallet.executionMode}"`);
   }
 
-  if (!wallet.safeAddress || !isAddress(wallet.safeAddress)) {
-    throw new Error(`Wallet ${wallet.name}: invalid safeAddress "${wallet.safeAddress}"`);
+  if (!wallet.safeAddress) {
+    throw new Error(
+      `Wallet ${wallet.name}: safeAddress is required. ` +
+      `This must be the Polymarket Safe Proxy Wallet address, not the EOA owner address.`
+    );
   }
 
-  if (!wallet.ownerAddress || !isAddress(wallet.ownerAddress)) {
-    throw new Error(`Wallet ${wallet.name}: invalid ownerAddress "${wallet.ownerAddress}"`);
+  if (!isAddress(wallet.safeAddress)) {
+    throw new Error(
+      `Wallet ${wallet.name}: invalid safeAddress "${wallet.safeAddress}". ` +
+      `Expected the Polymarket Safe Proxy Wallet address.`
+    );
   }
 
   if (!wallet.ownerPrivateKeyEnv) {
@@ -127,19 +133,29 @@ function resolveSafeWallet(wallet) {
     throw new Error(`Wallet ${wallet.name}: env var ${wallet.ownerPrivateKeyEnv} not set`);
   }
 
-  const derivedAccount = privateKeyToAccount(privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`);
-  if (derivedAccount.address.toLowerCase() !== wallet.ownerAddress.toLowerCase()) {
-    throw new Error(
-      `Wallet ${wallet.name}: private key derives to ${derivedAccount.address}, ` +
-      `expected ${wallet.ownerAddress}`
-    );
+  const normalizedPrivateKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
+  const derivedAccount = privateKeyToAccount(normalizedPrivateKey);
+
+  let ownerAddress = derivedAccount.address;
+
+  if (wallet.ownerAddress !== undefined && wallet.ownerAddress !== "") {
+    if (!isAddress(wallet.ownerAddress)) {
+      throw new Error(`Wallet ${wallet.name}: invalid ownerAddress "${wallet.ownerAddress}"`);
+    }
+    if (derivedAccount.address.toLowerCase() !== wallet.ownerAddress.toLowerCase()) {
+      throw new Error(
+        `Wallet ${wallet.name}: private key derives to ${derivedAccount.address}, ` +
+        `expected ${wallet.ownerAddress}`
+      );
+    }
+    ownerAddress = wallet.ownerAddress;
   }
 
   const result = {
     name: wallet.name,
     safeAddress: wallet.safeAddress,
-    ownerAddress: wallet.ownerAddress,
-    privateKey: privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`,
+    ownerAddress,
+    privateKey: normalizedPrivateKey,
     clob: { enabled: false }
   };
 
